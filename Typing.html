@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Typing Test — Apple Sleek</title>
+<style>
+  :root {
+    --apple-bg: #f5f5f7;
+    --apple-card: rgba(255, 255, 255, 0.85);
+    --apple-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    --apple-highlight: rgba(0,122,255,0.9);
+    --apple-radius: 14px;
+    --transition-speed: 0.25s;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "San Francisco", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    background: var(--apple-bg);
+    margin: 0;
+    padding: 40px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: #1d1d1f;
+  }
+  h1 {
+    font-size: 2.5rem;
+    font-weight: 600;
+    margin-bottom: 25px;
+    letter-spacing: -0.5px;
+  }
+  textarea, button {
+    font-family: inherit;
+    border-radius: var(--apple-radius);
+    border: none;
+    transition: box-shadow var(--transition-speed) ease, background var(--transition-speed) ease;
+  }
+  #customText, #typingPane {
+    width: 90%;
+    max-width: 800px;
+    padding: 14px 16px;
+    font-size: 1.05rem;
+    background: var(--apple-card);
+    box-shadow: var(--apple-shadow);
+    margin-bottom: 16px;
+    outline: none;
+  }
+  #customText:focus, #typingPane:focus {
+    box-shadow: 0 4px 18px rgba(0,122,255,0.3);
+  }
+  button {
+    padding: 12px 28px;
+    font-size: 1rem;
+    font-weight: 500;
+    background: var(--apple-highlight);
+    color: white;
+    cursor: pointer;
+    box-shadow: var(--apple-shadow);
+  }
+  button:hover {
+    background: rgba(0,122,255,1);
+  }
+  #readingPane {
+    height: 150px;
+    overflow-y: auto;
+    padding: 18px;
+    background: var(--apple-card);
+    border-radius: var(--apple-radius);
+    box-shadow: var(--apple-shadow);
+    font-size: 1.1rem;
+    line-height: 1.6;
+    margin-bottom: 20px;
+    white-space: pre-wrap;
+  }
+  .incorrect {
+    color: #ff3b30;
+    background-color: rgba(255, 59, 48, 0.2);
+    border-radius: 4px;
+  }
+  .pending {
+    background-color: rgba(0, 122, 255, 0.15);
+    border-radius: 4px;
+  }
+  #stats {
+    margin-top: 25px;
+    font-size: 1.05rem;
+    font-weight: 500;
+    color: #3c3c43;
+  }
+  /* Keyboard styling */
+  #keyboard {
+    margin-top: 20px;
+    padding: 10px;
+    background: var(--apple-card);
+    border-radius: var(--apple-radius);
+    box-shadow: var(--apple-shadow);
+  }
+  .key-row {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 6px;
+  }
+  .key {
+    border-radius: 6px;
+    margin: 2px;
+    padding: 10px 8px;
+    min-width: 34px;
+    text-align: center;
+    background: #eee;
+    font-size: 0.9rem;
+    transition: all var(--transition-speed) ease;
+  }
+  .left-pinky { background: #f8c8dc; }
+  .left-ring { background: #ffd580; }
+  .left-middle { background: #fff5ba; }
+  .left-index { background: #c8facc; }
+  .right-index { background: #cce5ff; }
+  .right-middle { background: #e0ccff; }
+  .right-ring { background: #ffcccb; }
+  .right-pinky { background: #dcdcdc; }
+  .thumb { background: #deb887; }
+  .active-key {
+    box-shadow: 0 0 12px 3px rgba(0,122,255,0.6);
+    transform: scale(1.05);
+  }
+</style>
+</head>
+<body>
+
+<h1>Typing Test</h1>
+<textarea id="customText" placeholder="Paste your custom passage here..."></textarea>
+<button id="startBtn">Start Test</button>
+
+<div id="testArea" style="display:none;">
+  <div id="readingPane"></div>
+  <textarea id="typingPane" placeholder="Start typing..." disabled></textarea>
+  <div id="keyboard"></div>
+</div>
+
+<div id="stats"></div>
+<button id="resetBtn" style="display:none;">Reset Test</button>
+
+<script>
+  const customText = document.getElementById('customText');
+  const startBtn = document.getElementById('startBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const testArea = document.getElementById('testArea');
+  const readingPane = document.getElementById('readingPane');
+  const typingPane = document.getElementById('typingPane');
+  const stats = document.getElementById('stats');
+  const keyboardDiv = document.getElementById('keyboard');
+
+  let startTime = null;
+  let timerInterval = null;
+
+  const keyboardLayout = [
+    ['`', '1','2','3','4','5','6','7','8','9','0','-','=','Backspace'],
+    ['Tab','q','w','e','r','t','y','u','i','o','p','[',']','\\'],
+    ['CapsLock','a','s','d','f','g','h','j','k','l',';','\'','Enter'],
+    ['Shift','z','x','c','v','b','n','m',',','.','/','Shift'],
+    ['Space']
+  ];
+  const fingerMap = {
+    '`':'left-pinky','1':'left-pinky','2':'left-ring','3':'left-middle','4':'left-index','5':'left-index',
+    '6':'right-index','7':'right-index','8':'right-middle','9':'right-ring','0':'right-pinky','-':'right-pinky','=':'right-pinky',
+    'q':'left-pinky','w':'left-ring','e':'left-middle','r':'left-index','t':'left-index',
+    'y':'right-index','u':'right-index','i':'right-middle','o':'right-ring','p':'right-pinky','[':'right-pinky',']':'right-pinky','\\':'right-pinky',
+    'a':'left-pinky','s':'left-ring','d':'left-middle','f':'left-index','g':'left-index',
+    'h':'right-index','j':'right-index','k':'right-middle','l':'right-ring',';':'right-pinky','\'':'right-pinky',
+    'z':'left-pinky','x':'left-ring','c':'left-middle','v':'left-index','b':'left-index',
+    'n':'right-index','m':'right-index',',':'right-middle','.':'right-ring','/':'right-pinky',
+    ' ':'thumb'
+  };
+
+  function renderKeyboard() {
+    keyboardDiv.innerHTML = '';
+    keyboardLayout.forEach(row => {
+      const rowDiv = document.createElement('div');
+      rowDiv.className = 'key-row';
+      row.forEach(key => {
+        const keyDiv = document.createElement('div');
+        keyDiv.className = 'key';
+        const lowerKey = key.toLowerCase();
+        if (fingerMap[lowerKey]) keyDiv.classList.add(fingerMap[lowerKey]);
+        keyDiv.textContent = key;
+        keyDiv.dataset.key = lowerKey;
+        rowDiv.appendChild(keyDiv);
+      });
+      keyboardDiv.appendChild(rowDiv);
+    });
+  }
+  renderKeyboard();
+
+  function highlightKey(char) {
+    document.querySelectorAll('.key').forEach(k => k.classList.remove('active-key'));
+    let targetChar = char.toLowerCase();
+    if (targetChar === '\n') targetChar = 'enter';
+    if (targetChar === '\t') targetChar = 'tab';
+    if (targetChar === ' ') targetChar = ' ';
+    const keyDiv = document.querySelector(`.key[data-key="${CSS.escape(targetChar)}"]`);
+    if (keyDiv) keyDiv.classList.add('active-key');
+  }
+
+  function startTest() {
+    const text = customText.value.trim();
+    if (!text) {
+      alert('Please enter some text to start the test.');
+      return;
+    }
+    testArea.style.display = 'block';
+    resetBtn.style.display = 'inline-block';
+    readingPane.innerHTML = '';
+    typingPane.value = '';
+    typingPane.disabled = false;
+    typingPane.focus();
+    stats.textContent = '';
+
+    const chars = text.split('').map(c => `<span>${c}</span>`).join('');
+    readingPane.innerHTML = chars;
+
+    startTime = Date.now();
+    timerInterval = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      stats.textContent = `Time: ${elapsed} sec`;
+    }, 1000);
+
+    updateHighlightsAndScroll();
+  }
+
+  function endTest() {
+    clearInterval(timerInterval);
+    typingPane.disabled = true;
+    const typed = typingPane.value;
+    const spans = readingPane.querySelectorAll('span');
+    let correctChars = 0;
+    for (let i = 0; i < spans.length; i++) {
+      if (typed[i] === spans[i].textContent) correctChars++;
+    }
+    const accuracy = Math.round((correctChars / spans.length) * 100);
+    const wordsTyped = typed.trim().split(/\s+/).filter(Boolean).length;
+    const minutes = (Date.now() - startTime) / 1000 / 60;
+    const wpm = Math.round(wordsTyped / minutes);
+    stats.textContent = `✅ Completed in ${Math.floor((Date.now() - startTime) / 1000)} sec | WPM: ${wpm} | Accuracy: ${accuracy}%`;
+  }
+
+  function updateHighlightsAndScroll() {
+    const typed = typingPane.value;
+    const spans = readingPane.querySelectorAll('span');
+    for (let i = 0; i < spans.length; i++) {
+      spans[i].classList.remove('incorrect', 'pending');
+      if (typed[i] == null) {
+        spans[i].classList.add('pending');
+      } else if (typed[i] !== spans[i].textContent) {
+        spans[i].classList.add('incorrect');
+      }
+    }
+    const currentSpan = spans[typed.length] || spans[spans.length - 1];
+    if (currentSpan) {
+      readingPane.scrollTop = currentSpan.offsetTop - readingPane.offsetTop - 10;
+      highlightKey(currentSpan.textContent);
+    }
+    if (typed.length >= spans.length) endTest();
+  }
+
+  typingPane.addEventListener('input', updateHighlightsAndScroll);
+  startBtn.addEventListener('click', startTest);
+  resetBtn.addEventListener('click', () => location.reload());
+</script>
+</body>
+</html>
